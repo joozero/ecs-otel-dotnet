@@ -1,6 +1,6 @@
-# AWS Distro for OpenTelemetry .NET - Integration Testing App
+# ECS OpenTelemetry DotNet
 
-This application validates the continual integration with the AWS Distro for OpenTelemetry .NET and the AWS X-Ray back-end service. Validation is done using the [AWS Test Framework for OpenTelemetry](https://github.com/aws-observability/aws-otel-test-framework).
+This application is sample for the continual integration with the AWS Distro for OpenTelemetry .NET and the AWS X-Ray back-end service. 
 
 ## Application interface
 
