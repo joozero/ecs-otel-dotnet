@@ -8,7 +8,7 @@ services:
       - ~/.aws:/root/.aws:ro
       - .:/config
     environment:
-      - AWS_REGION=us-west-2
+      - AWS_REGION=ap-northeast-2
     ports:
       - "4317:4317" # OTLP over gRPC receiver
       - "4318:4318" # OTLP over HTTP receiver
