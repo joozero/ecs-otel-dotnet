@@ -1,0 +1,91 @@
+version: "3.7"
+services:
+  # OpenTelemetry Collector
+  otel:
+    image: amazon/aws-otel-collector:latest
+    command: --config /config/collector-config-local.yml
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - .:/config
+    environment:
+      - AWS_REGION=us-west-2
+    ports:
+      - "4317:4317" # OTLP over gRPC receiver
+      - "4318:4318" # OTLP over HTTP receiver
+      - "9464" # Prometheus exporter
+      - "8888" # metrics endpoint
+    depends_on:
+      - jaeger
+
+  # Jaeger
+  jaeger:
+    image: jaegertracing/all-in-one
+    container_name: jaeger
+    command:
+      - "--memory.max-traces"
+      - "10000"
+      - "--query.base-path"
+      - "/jaeger/ui"
+      - "--prometheus.server-url"
+      - "http://${PROMETHEUS_ADDR}"
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+    ports:
+      - "${JAEGER_SERVICE_PORT}:${JAEGER_SERVICE_PORT}" # Jaeger UI
+      - "4317" # OTLP gRPC default port
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=prometheus
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:9.4.7
+    container_name: grafana
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    ports:
+      - "${GRAFANA_SERVICE_PORT}:${GRAFANA_SERVICE_PORT}"
+
+  # Prometheus
+  prometheus:
+    image: quay.io/prometheus/prometheus:v2.43.0
+    container_name: prometheus
+    command:
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --storage.tsdb.retention.time=1h
+      - --config.file=/etc/prometheus/prometheus-config.yaml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.route-prefix=/
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    ports:
+      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+
+  app:
+    image: aspnetapp:latest
+    environment:
+      - AWS_REGION=us-west-2
+      - INSTANCE_ID
+      - LISTEN_ADDRESS=0.0.0.0:8080
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=aws-otel-integ-test
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - '8080:8080'
+    volumes:
+      - ~/.aws:/root/.aws:ro
