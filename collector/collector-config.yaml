@@ -1,0 +1,66 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  awsecscontainermetrics:
+    collection_interval: 10s
+
+processors:
+  # filter:
+  #   metrics:
+  #     include:
+  #       match_type: strict
+  #       metric_names:
+  #         - ecs.task.memory.utilized
+  #         - ecs.task.memory.reserved
+  #         - ecs.task.cpu.utilized
+  #         - ecs.task.cpu.reserved
+  #         - ecs.task.network.rate.rx
+  #         - ecs.task.network.rate.tx
+  #         - ecs.task.storage.read_bytes
+  #         - ecs.task.storage.write_bytes
+  
+  batch:
+
+exporters:
+  logging:
+    loglevel: debug
+  awsxray:
+    region: ap-northeast-2
+  awsemf:
+    namespace: 'ECS/ContainerMetrics/OpenTelemetry'
+    log_group_name: '/ecs/containermetrics/opentelemetry'
+  prometheusremotewrite:
+    endpoint: {your-prometheus-writer-endpoint}
+    auth:
+      authenticator: sigv4auth
+  # prometheus:
+  #   endpoint: "0.0.0.0:9464"
+  #   resource_to_telemetry_conversion:
+  #     enabled: true
+  #   enable_open_metrics: true
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+  sigv4auth:
+    region: ap-northeast-2
+
+service:
+  extensions: [pprof, zpages, health_check, sigv4auth]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, awsxray]
+    metrics:
+      receivers: [otlp, awsecscontainermetrics]
+      processors: [batch]
+      # exporters: [logging, prometheus, prometheusremotewrite]
+      exporters: [logging, prometheusremotewrite, awsemf]

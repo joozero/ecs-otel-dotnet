@@ -36,7 +36,7 @@ exporters:
       enabled: true
     enable_open_metrics: true
   prometheusremotewrite:
-    endpoint: https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-9d5b8f69-76ab-42ff-9143-51640c473db8/api/v1/remote_write
+    endpoint: {your-prometheus-writer-endpoint}
     auth:
       authenticator: sigv4auth
 
@@ -60,4 +60,3 @@ service:
       receivers: [otlp]
       processors: [batch, filter]
       exporters: [logging, prometheus, prometheusremotewrite]
-      # exporters: [logging, prometheusremotewrite]
